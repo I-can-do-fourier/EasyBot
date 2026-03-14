@@ -254,10 +254,17 @@ func (c *Client) responsesChat(ctx context.Context, messages []Message, tools []
 	if err != nil {
 		return Response{}, err
 	}
+	if looksLikeSSE(raw) {
+		return parseResponsesSSE(bytes.NewReader(raw))
+	}
 	return parseResponsesJSON(raw)
 }
 
 func parseResponsesJSON(raw []byte) (Response, error) {
+	if looksLikeSSE(raw) {
+		return parseResponsesSSE(bytes.NewReader(raw))
+	}
+
 	var decoded responsesResponse
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		return Response{}, err
@@ -566,4 +573,9 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func looksLikeSSE(raw []byte) bool {
+	trimmed := bytes.TrimSpace(raw)
+	return bytes.HasPrefix(trimmed, []byte("event:")) || bytes.HasPrefix(trimmed, []byte("data:"))
 }

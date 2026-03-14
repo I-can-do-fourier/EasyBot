@@ -132,6 +132,32 @@ func TestCodexOAuthModeUsesResponsesPathAndAccessToken(t *testing.T) {
 	}
 }
 
+func TestCodexOAuthModeFallsBackToSSEWhenContentTypeIsWrong(t *testing.T) {
+	client := NewClient("https://chatgpt.com/backend-api/codex", "", "oauth-token", "acct-123", "gpt-5-codex", "codex_oauth")
+	client.httpClient = &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			return jsonResponse(strings.Join([]string{
+				`event: response.output_item.added`,
+				`data: {"type":"response.output_item.added","item":{"type":"message","id":"msg_123"}}`,
+				``,
+				`event: response.output_text.delta`,
+				`data: {"type":"response.output_text.delta","delta":"hello from sse"}`,
+				``,
+				`data: [DONE]`,
+				``,
+			}, "\n")), nil
+		}),
+	}
+
+	resp, err := client.Chat(context.Background(), []Message{{Role: "user", Content: "hello"}}, nil)
+	if err != nil {
+		t.Fatalf("Chat returned error: %v", err)
+	}
+	if resp.Text() != "hello from sse" {
+		t.Fatalf("resp.Text = %q", resp.Text())
+	}
+}
+
 func jsonResponse(body string) *http.Response {
 	return &http.Response{
 		StatusCode: http.StatusOK,
