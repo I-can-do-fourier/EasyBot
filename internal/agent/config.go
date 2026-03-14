@@ -1,12 +1,15 @@
 package agent
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"easybot/internal/auth"
 )
 
 type Mode string
@@ -30,9 +33,20 @@ type Config struct {
 }
 
 func LoadConfigFromEnv() (Config, error) {
+	apiKey := strings.TrimSpace(os.Getenv("EASYBOT_API_KEY"))
+	if apiKey == "" {
+		savedAuth, err := auth.Load()
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return Config{}, err
+		}
+		if err == nil {
+			apiKey = strings.TrimSpace(savedAuth.APIKey)
+		}
+	}
+
 	cfg := Config{
 		BaseURL:            envDefault("EASYBOT_BASE_URL", "https://api.openai.com/v1"),
-		APIKey:             strings.TrimSpace(os.Getenv("EASYBOT_API_KEY")),
+		APIKey:             apiKey,
 		Model:              envDefault("EASYBOT_MODEL", "gpt-4.1-mini"),
 		AllowedRoots:       splitCSV(envDefault("EASYBOT_ALLOWED_ROOTS", defaultAllowedRoots())),
 		MaxSteps:           envInt("EASYBOT_MAX_STEPS", 8),

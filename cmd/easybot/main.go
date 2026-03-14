@@ -45,6 +45,29 @@ func main() {
 		if err := acp.Serve(ctx, cfg, os.Stdin, os.Stdout); err != nil {
 			log.Fatal(err)
 		}
+	case "login":
+		// run a temporary HTTP server to handle the OAuth callback and store the to over run.sh file
+		if err := server.RunLogin(ctx, cfg); err != nil {
+			log.Fatal(err)
+		}
+		/* this is the codex for the login flow that we want to implement in server.RunLogin:
+		generate PKCE verifier/challenge + random state
+		open https://auth.openai.com/oauth/authorize?...
+		try to capture callback on http://127.0.0.1:1455/auth/callback
+		if callback can’t bind (or you’re remote/headless), paste the redirect URL/code
+		exchange at https://auth.openai.com/oauth/token
+		extract accountId from the access token and store { access, refresh, expires, accountId }
+
+		*/
+
+		// 1. tell the user that they need to login via the browser
+
+		// 2. open the browser to the login page
+
+		// 3. after successful login, the server will receive the callback, exchange the code for a token, and print out instructions on how to the config file
+
+		// 4. the user can then copy the token and set it as an environment variable or use it in their application
+
 	default:
 		log.Fatalf("unknown mode %q", runMode)
 	}
@@ -61,6 +84,9 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 			fs, _ := newFlagSet(cfg, runMode, os.Stdout)
 			fs.Usage()
 			os.Exit(0)
+		case "login", "--login":
+			runMode = "login"
+			args = args[1:]
 		default:
 			return "", "", cfg, fmt.Errorf("unknown subcommand %q", args[0])
 		}
@@ -94,8 +120,11 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 			return "", "", cfg, fmt.Errorf("--http and --acp cannot be used together")
 		}
 		runMode = "http"
-	} else if runMode != "http" && runMode != "acp" {
+	} else if runMode != "http" && runMode != "acp" && runMode != "login" {
 		runMode = "terminal"
+	}
+	if *values.loginMode {
+		runMode = "login"
 	}
 	if len(cfg.AllowedRoots) == 0 {
 		return "", "", cfg, fmt.Errorf("at least one allowed root is required")
@@ -136,6 +165,7 @@ type flagValues struct {
 	auditLog       *string
 	outputMaxBytes *int
 	acpMode        *bool
+	loginMode      *bool
 }
 
 func newFlagSet(cfg agent.Config, runMode string, output io.Writer) (*flag.FlagSet, flagValues) {
@@ -153,6 +183,7 @@ func newFlagSet(cfg agent.Config, runMode string, output io.Writer) (*flag.FlagS
 		auditLog:       fs.String("audit-log", cfg.AuditLogPath, "audit log path"),
 		outputMaxBytes: fs.Int("tool-output-max-bytes", cfg.ToolOutputMaxBytes, "max bytes captured from each tool output stream"),
 		acpMode:        fs.Bool("acp", cfg.Mode == agent.ModeACP, "run ACP stdio mode"),
+		loginMode:      fs.Bool("login", false, "run login mode to get oauth token interactively"),
 	}
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), `easyBot

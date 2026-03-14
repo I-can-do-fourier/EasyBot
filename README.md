@@ -49,6 +49,14 @@ If your provider requires a key:
 export EASYBOT_API_KEY=your_api_key
 ```
 
+Or sign in with OpenAI interactively:
+
+```bash
+go run ./cmd/easybot login
+```
+
+That flow stores the OAuth bundle in `~/.easybot/auth.json`. If the login can exchange a platform API key, `easyBot` will reuse that saved key automatically when `EASYBOT_API_KEY` is unset.
+
 Optional:
 
 ```bash
@@ -162,6 +170,7 @@ What is intentionally deferred:
 
 - The current implementation assumes an OpenAI-compatible `chat/completions` API with tool calling.
 - `EASYBOT_API_KEY` is optional so local OpenAI-compatible servers can work without fake credentials.
+- `go run ./cmd/easybot login` uses the current OpenAI Codex OAuth browser flow with PKCE, a localhost callback on port `1455`, and a manual paste fallback for headless or remote sessions.
 - The terminal frontend supports interactive approval prompts.
 - The HTTP frontend only auto-approves safe read-only operations; file/data changes are denied unless you add a separate approval roundtrip.
 - Built-in tools now include filename search and text-content search, so the agent can inspect files without falling back to shell as often.
