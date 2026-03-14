@@ -45,6 +45,15 @@ func TestCodexOAuthModeUsesResponsesPathAndAccessToken(t *testing.T) {
 			if got := r.Header.Get("ChatGPT-Account-ID"); got != "acct-123" {
 				t.Fatalf("ChatGPT-Account-ID = %q", got)
 			}
+			if got := r.Header.Get("Originator"); got != "pi" {
+				t.Fatalf("Originator = %q", got)
+			}
+			if got := r.Header.Get("OpenAI-Beta"); got != "responses=experimental" {
+				t.Fatalf("OpenAI-Beta = %q", got)
+			}
+			if got := r.Header.Get("Accept"); got != "text/event-stream" {
+				t.Fatalf("Accept = %q", got)
+			}
 
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
@@ -57,18 +66,48 @@ func TestCodexOAuthModeUsesResponsesPathAndAccessToken(t *testing.T) {
 			if payload["model"] != "gpt-5-codex" {
 				t.Fatalf("model = %#v", payload["model"])
 			}
+			if payload["store"] != false {
+				t.Fatalf("store = %#v", payload["store"])
+			}
+			if payload["stream"] != true {
+				t.Fatalf("stream = %#v", payload["stream"])
+			}
+			if payload["instructions"] != "system prompt" {
+				t.Fatalf("instructions = %#v", payload["instructions"])
+			}
+			if payload["tool_choice"] != "auto" {
+				t.Fatalf("tool_choice = %#v", payload["tool_choice"])
+			}
 
-			return jsonResponse(`{
-				"id":"resp_123",
-				"output":[
-					{"type":"message","role":"assistant","content":[{"type":"output_text","text":"thinking"}]},
-					{"type":"function_call","id":"fc_123","call_id":"call_123","name":"search_files","arguments":"{\"pattern\":\"resume\"}"}
-				]
-			}`), nil
+			return sseResponse(strings.Join([]string{
+				`event: response.output_item.added`,
+				`data: {"type":"response.output_item.added","item":{"type":"message","id":"msg_123"}}`,
+				``,
+				`event: response.output_text.delta`,
+				`data: {"type":"response.output_text.delta","delta":"thinking"}`,
+				``,
+				`event: response.output_item.done`,
+				`data: {"type":"response.output_item.done","item":{"type":"message","id":"msg_123"}}`,
+				``,
+				`event: response.output_item.added`,
+				`data: {"type":"response.output_item.added","item":{"type":"function_call","id":"fc_123","call_id":"call_123","name":"search_files"}}`,
+				``,
+				`event: response.function_call_arguments.delta`,
+				`data: {"type":"response.function_call_arguments.delta","delta":"{\"pattern\":\"resume\"}"}`,
+				``,
+				`event: response.output_item.done`,
+				`data: {"type":"response.output_item.done","item":{"type":"function_call","id":"fc_123","call_id":"call_123","name":"search_files"}}`,
+				``,
+				`data: [DONE]`,
+				``,
+			}, "\n")), nil
 		}),
 	}
 
-	resp, err := client.Chat(context.Background(), []Message{{Role: "user", Content: "find resume"}}, []ToolSpec{{
+	resp, err := client.Chat(context.Background(), []Message{
+		{Role: "system", Content: "system prompt"},
+		{Role: "user", Content: "find resume"},
+	}, []ToolSpec{{
 		Type: "function",
 		Function: ToolFunction{
 			Name:        "search_files",
@@ -88,6 +127,9 @@ func TestCodexOAuthModeUsesResponsesPathAndAccessToken(t *testing.T) {
 	if resp.ToolCalls()[0].ID != "call_123" {
 		t.Fatalf("tool call ID = %q", resp.ToolCalls()[0].ID)
 	}
+	if resp.ToolCalls()[0].Function.Arguments != `{"pattern":"resume"}` {
+		t.Fatalf("tool call arguments = %q", resp.ToolCalls()[0].Function.Arguments)
+	}
 }
 
 func jsonResponse(body string) *http.Response {
@@ -95,6 +137,15 @@ func jsonResponse(body string) *http.Response {
 		StatusCode: http.StatusOK,
 		Status:     "200 OK",
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+}
+
+func sseResponse(body string) *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Status:     "200 OK",
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
 		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 }

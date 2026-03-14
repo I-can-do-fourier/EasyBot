@@ -172,7 +172,8 @@ What is intentionally deferred:
 ## Notes
 
 - `EASYBOT_AUTH_MODE=api_key` uses the OpenAI-compatible `chat/completions` path and `EASYBOT_API_KEY`.
-- `EASYBOT_AUTH_MODE=codex_oauth` uses the saved OAuth `access_token` plus `ChatGPT-Account-ID` against the Codex `/responses` path.
+- `EASYBOT_AUTH_MODE=codex_oauth` uses the saved OAuth `access_token` plus `ChatGPT-Account-ID` against the Codex `/responses` path over HTTP/SSE.
+- WebSocket/`auto` transport parity with Codex/OpenClaw is not implemented yet.
 - `go run ./cmd/easybot login` uses the current OpenAI Codex OAuth browser flow with PKCE, a localhost callback on port `1455`, and a manual paste fallback for headless or remote sessions.
 - `run.sh` no longer hardcodes provider credentials; saved config or env vars drive runtime auth.
 - The terminal frontend supports interactive approval prompts.
