@@ -38,6 +38,7 @@ const (
 	oauthRequestedAPIKeyToken    = "openai-api-key"
 	manualLoginPromptDelay       = 15 * time.Second
 	defaultOpenAIBaseURL         = "https://api.openai.com/v1"
+	defaultCodexBaseURL          = "https://chatgpt.com/backend-api/codex"
 	defaultOpenAIModel           = "gpt-4.1-mini"
 	loginUserAgent               = "easybot/0.1"
 )
@@ -156,6 +157,12 @@ func RunLogin(ctx context.Context, cfg agent.Config) error {
 	if saved.ExpiresAt.IsZero() && tokens.ExpiresIn > 0 {
 		saved.ExpiresAt = time.Now().UTC().Add(time.Duration(tokens.ExpiresIn) * time.Second)
 	}
+	saved.BaseURL = defaultCodexBaseURL
+	saved.Model = defaultOpenAIModel
+	if strings.TrimSpace(cfg.Model) != "" {
+		saved.Model = cfg.Model
+	}
+	saved.AuthMode = string(agent.AuthModeCodex)
 
 	// apiKey, apiKeyErr := exchangeAPIKey(ctx, httpClient, oauthTokenURL, tokens.IDToken, tokens.AccessToken)
 	// if apiKeyErr == nil {
@@ -176,15 +183,16 @@ func RunLogin(ctx context.Context, cfg agent.Config) error {
 	if !saved.ExpiresAt.IsZero() {
 		fmt.Printf("Access token expires at %s\n", saved.ExpiresAt.UTC().Format(time.RFC3339))
 	}
+	fmt.Printf("Saved runtime defaults: auth_mode=%s, base_url=%s, model=%s\n", saved.AuthMode, saved.BaseURL, saved.Model)
 	if saved.APIKey != "" {
 		fmt.Println("An OpenAI API key was also exchanged and saved. easyBot will reuse it automatically when EASYBOT_API_KEY is unset.")
 	} else {
-		fmt.Printf("OAuth login completed, but API key exchange did not return a usable key: %s\n", explainAPIKeyExchangeError(apiKeyErr))
-		fmt.Println("The raw OAuth bundle is saved, but this easyBot client still calls /v1/chat/completions, which expects a platform API key rather than the ChatGPT OAuth access token.")
+		fmt.Println("OAuth login completed and the raw OAuth bundle was saved.")
+		fmt.Println("easyBot will use the saved Codex OAuth config when EASYBOT_AUTH_MODE/EASYBOT_BASE_URL/EASYBOT_ACCESS_TOKEN are not overridden.")
 	}
 	if cfg.BaseURL != defaultOpenAIBaseURL || !strings.HasPrefix(cfg.Model, "gpt-") {
-		fmt.Println("Current runtime settings are not using OpenAI defaults.")
-		fmt.Printf("Use EASYBOT_BASE_URL=%s and a GPT model such as %s for this login to apply.\n", defaultOpenAIBaseURL, defaultOpenAIModel)
+		fmt.Println("Current runtime settings differ from the saved Codex OAuth defaults.")
+		fmt.Printf("Use EASYBOT_BASE_URL=%s and a GPT model such as %s if you want to override the saved login config.\n", saved.BaseURL, saved.Model)
 	}
 
 	return nil
@@ -544,16 +552,4 @@ func openBrowser(targetURL string) error {
 		cmd = exec.Command("xdg-open", targetURL)
 	}
 	return cmd.Start()
-}
-
-func explainAPIKeyExchangeError(err error) string {
-	if err == nil {
-		return "unknown error"
-	}
-
-	message := err.Error()
-	if strings.Contains(message, "missing organization_id") {
-		return message + " (this usually means the OAuth token is for ChatGPT/Codex use but does not include a Platform organization/project claim, so OpenAI will not mint a platform API key from it)"
-	}
-	return message
 }

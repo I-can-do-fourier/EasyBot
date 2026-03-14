@@ -102,7 +102,13 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 
 	cfg.BaseURL = strings.TrimSpace(*values.baseURL)
 	cfg.APIKey = strings.TrimSpace(*values.apiKey)
+	cfg.AccessToken = strings.TrimSpace(*values.accessToken)
+	cfg.AccountID = strings.TrimSpace(*values.accountID)
 	cfg.Model = strings.TrimSpace(*values.model)
+	cfg.AuthMode = agent.AuthMode(strings.TrimSpace(*values.authMode))
+	if cfg.AuthMode == "" {
+		cfg.AuthMode = agent.AuthModeAPIKey
+	}
 	cfg.AllowedRoots = splitAndTrim(*values.roots)
 	cfg.MaxSteps = *values.maxSteps
 	cfg.StepTimeout = time.Duration(*values.stepTimeoutSec) * time.Second
@@ -138,6 +144,9 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 	if cfg.ToolOutputMaxBytes < 4096 {
 		return "", "", cfg, fmt.Errorf("--tool-output-max-bytes must be >= 4096")
 	}
+	if cfg.AuthMode != agent.AuthModeAPIKey && cfg.AuthMode != agent.AuthModeCodex {
+		return "", "", cfg, fmt.Errorf("--auth-mode must be %q or %q", agent.AuthModeAPIKey, agent.AuthModeCodex)
+	}
 	return runMode, *values.listen, cfg, nil
 }
 
@@ -159,6 +168,9 @@ type flagValues struct {
 	baseURL        *string
 	apiKey         *string
 	model          *string
+	authMode       *string
+	accessToken    *string
+	accountID      *string
 	roots          *string
 	maxSteps       *int
 	stepTimeoutSec *int
@@ -171,12 +183,19 @@ type flagValues struct {
 func newFlagSet(cfg agent.Config, runMode string, output io.Writer) (*flag.FlagSet, flagValues) {
 	fs := flag.NewFlagSet("easybot", flag.ContinueOnError)
 	fs.SetOutput(output)
+	authMode := string(cfg.AuthMode)
+	if strings.TrimSpace(authMode) == "" {
+		authMode = string(agent.AuthModeAPIKey)
+	}
 	values := flagValues{
 		httpMode:       fs.Bool("http", runMode == "http", "run HTTP server mode"),
 		listen:         fs.String("listen", ":8080", "HTTP listen address"),
 		baseURL:        fs.String("base-url", cfg.BaseURL, "LLM API base URL"),
 		apiKey:         fs.String("api-key", cfg.APIKey, "LLM API key"),
+		accessToken:    fs.String("access-token", cfg.AccessToken, "OAuth access token for Codex auth mode"),
+		accountID:      fs.String("account-id", cfg.AccountID, "ChatGPT/Codex account ID for Codex auth mode"),
 		model:          fs.String("model", cfg.Model, "LLM model name"),
+		authMode:       fs.String("auth-mode", authMode, "auth mode: api_key or codex_oauth"),
 		roots:          fs.String("roots", strings.Join(cfg.AllowedRoots, ","), "comma-separated allowed roots"),
 		maxSteps:       fs.Int("max-steps", cfg.MaxSteps, "maximum agent loop steps"),
 		stepTimeoutSec: fs.Int("step-timeout-sec", int(cfg.StepTimeout/time.Second), "per-step timeout in seconds"),

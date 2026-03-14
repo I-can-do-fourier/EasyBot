@@ -17,6 +17,9 @@ type File struct {
 	AccountID    string    `json:"account_id,omitempty"`
 	ExpiresAt    time.Time `json:"expires_at,omitempty"`
 	APIKey       string    `json:"api_key,omitempty"`
+	BaseURL      string    `json:"base_url,omitempty"`
+	Model        string    `json:"model,omitempty"`
+	AuthMode     string    `json:"auth_mode,omitempty"`
 }
 
 func Path() (string, error) {

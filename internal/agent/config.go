@@ -13,16 +13,22 @@ import (
 )
 
 type Mode string
+type AuthMode string
 
 const (
-	ModeNonACP Mode = "non-acp"
-	ModeACP    Mode = "acp"
+	ModeNonACP     Mode     = "non-acp"
+	ModeACP        Mode     = "acp"
+	AuthModeAPIKey AuthMode = "api_key"
+	AuthModeCodex  AuthMode = "codex_oauth"
 )
 
 type Config struct {
 	BaseURL            string
 	APIKey             string
+	AccessToken        string
+	AccountID          string
 	Model              string
+	AuthMode           AuthMode
 	AllowedRoots       []string
 	MaxSteps           int
 	StepTimeout        time.Duration
@@ -33,21 +39,38 @@ type Config struct {
 }
 
 func LoadConfigFromEnv() (Config, error) {
+	savedAuth, err := auth.Load()
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return Config{}, err
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		savedAuth = auth.File{}
+	}
+
+	authMode := AuthMode(envDefault("EASYBOT_AUTH_MODE", fallbackString(savedAuth.AuthMode, string(AuthModeAPIKey))))
+	baseURL := envDefault("EASYBOT_BASE_URL", fallbackString(savedAuth.BaseURL, defaultBaseURL(authMode)))
+	model := envDefault("EASYBOT_MODEL", fallbackString(savedAuth.Model, "gpt-4.1-mini"))
+
 	apiKey := strings.TrimSpace(os.Getenv("EASYBOT_API_KEY"))
 	if apiKey == "" {
-		savedAuth, err := auth.Load()
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return Config{}, err
-		}
-		if err == nil {
-			apiKey = strings.TrimSpace(savedAuth.APIKey)
-		}
+		apiKey = strings.TrimSpace(savedAuth.APIKey)
+	}
+	accessToken := strings.TrimSpace(os.Getenv("EASYBOT_ACCESS_TOKEN"))
+	if accessToken == "" {
+		accessToken = strings.TrimSpace(savedAuth.AccessToken)
+	}
+	accountID := strings.TrimSpace(os.Getenv("EASYBOT_ACCOUNT_ID"))
+	if accountID == "" {
+		accountID = strings.TrimSpace(savedAuth.AccountID)
 	}
 
 	cfg := Config{
-		BaseURL:            envDefault("EASYBOT_BASE_URL", "https://api.openai.com/v1"),
+		BaseURL:            baseURL,
 		APIKey:             apiKey,
-		Model:              envDefault("EASYBOT_MODEL", "gpt-4.1-mini"),
+		AccessToken:        accessToken,
+		AccountID:          accountID,
+		Model:              model,
+		AuthMode:           authMode,
 		AllowedRoots:       splitCSV(envDefault("EASYBOT_ALLOWED_ROOTS", defaultAllowedRoots())),
 		MaxSteps:           envInt("EASYBOT_MAX_STEPS", 8),
 		StepTimeout:        time.Duration(envInt("EASYBOT_STEP_TIMEOUT_SEC", 45)) * time.Second,
@@ -68,6 +91,9 @@ func LoadConfigFromEnv() (Config, error) {
 	}
 	if cfg.Mode != ModeNonACP && cfg.Mode != ModeACP {
 		return Config{}, fmt.Errorf("EASYBOT_MODE must be %q or %q", ModeNonACP, ModeACP)
+	}
+	if cfg.AuthMode != AuthModeAPIKey && cfg.AuthMode != AuthModeCodex {
+		return Config{}, fmt.Errorf("EASYBOT_AUTH_MODE must be %q or %q", AuthModeAPIKey, AuthModeCodex)
 	}
 	return cfg, nil
 }
@@ -109,4 +135,18 @@ func defaultAllowedRoots() string {
 		return ".,/tmp"
 	}
 	return home + ",/tmp"
+}
+
+func fallbackString(value, fallback string) string {
+	if value = strings.TrimSpace(value); value != "" {
+		return value
+	}
+	return fallback
+}
+
+func defaultBaseURL(authMode AuthMode) string {
+	if authMode == AuthModeCodex {
+		return "https://chatgpt.com/backend-api/codex"
+	}
+	return "https://api.openai.com/v1"
 }

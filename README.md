@@ -41,21 +41,22 @@ Set these before running:
 ```bash
 export EASYBOT_MODEL=gpt-4.1-mini
 export EASYBOT_BASE_URL=https://api.openai.com/v1
+export EASYBOT_AUTH_MODE=api_key
 ```
 
-If your provider requires a key:
+If you are using API-key mode:
 
 ```bash
 export EASYBOT_API_KEY=your_api_key
 ```
 
-Or sign in with OpenAI interactively:
+Or sign in with Codex/ChatGPT OAuth interactively:
 
 ```bash
 go run ./cmd/easybot login
 ```
 
-That flow stores the OAuth bundle in `~/.easybot/auth.json`. If the login can exchange a platform API key, `easyBot` will reuse that saved key automatically when `EASYBOT_API_KEY` is unset.
+That flow stores the OAuth bundle and runtime defaults in `~/.easybot/auth.json`. After login, `easyBot` will reuse the saved `auth_mode`, `base_url`, `model`, `access_token`, and `account_id` when the corresponding env vars are unset.
 
 Optional:
 
@@ -65,6 +66,8 @@ export EASYBOT_MAX_STEPS=8
 export EASYBOT_LOG_LEVEL=debug
 export EASYBOT_AUDIT_LOG=/tmp/easybot-audit.jsonl
 export EASYBOT_TOOL_OUTPUT_MAX_BYTES=65536
+export EASYBOT_ACCESS_TOKEN=oauth_access_token
+export EASYBOT_ACCOUNT_ID=chatgpt_account_id
 ```
 
 ## Run directly
@@ -168,9 +171,10 @@ What is intentionally deferred:
 
 ## Notes
 
-- The current implementation assumes an OpenAI-compatible `chat/completions` API with tool calling.
-- `EASYBOT_API_KEY` is optional so local OpenAI-compatible servers can work without fake credentials.
+- `EASYBOT_AUTH_MODE=api_key` uses the OpenAI-compatible `chat/completions` path and `EASYBOT_API_KEY`.
+- `EASYBOT_AUTH_MODE=codex_oauth` uses the saved OAuth `access_token` plus `ChatGPT-Account-ID` against the Codex `/responses` path.
 - `go run ./cmd/easybot login` uses the current OpenAI Codex OAuth browser flow with PKCE, a localhost callback on port `1455`, and a manual paste fallback for headless or remote sessions.
+- `run.sh` no longer hardcodes provider credentials; saved config or env vars drive runtime auth.
 - The terminal frontend supports interactive approval prompts.
 - The HTTP frontend only auto-approves safe read-only operations; file/data changes are denied unless you add a separate approval roundtrip.
 - Built-in tools now include filename search and text-content search, so the agent can inspect files without falling back to shell as often.

@@ -86,7 +86,7 @@ func NewRunner(cfg Config, approver Approver) (*Runner, error) {
 	audit := security.NewAuditLog(auditWriter)
 	registry := tools.NewRegistry(pathPolicy, cmdPolicy, audit, cfg.ToolOutputMaxBytes)
 
-	client := llm.NewClient(cfg.BaseURL, cfg.APIKey, cfg.Model)
+	client := llm.NewClient(cfg.BaseURL, cfg.APIKey, cfg.AccessToken, cfg.AccountID, cfg.Model, string(cfg.AuthMode))
 	return &Runner{
 		cfg:      cfg,
 		client:   client,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -167,13 +166,6 @@ func TestBuildAuthFileExtractsAccountIDAndExpiry(t *testing.T) {
 	}
 	if !got.ExpiresAt.Equal(expiry) {
 		t.Fatalf("ExpiresAt = %s, want %s", got.ExpiresAt, expiry)
-	}
-}
-
-func TestExplainAPIKeyExchangeErrorMentionsPlatformOrg(t *testing.T) {
-	err := explainAPIKeyExchangeError(errors.New("invalid_subject_token: missing organization_id"))
-	if !strings.Contains(err, "Platform organization/project claim") {
-		t.Fatalf("unexpected explanation: %q", err)
 	}
 }
 

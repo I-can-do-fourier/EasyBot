@@ -20,6 +20,9 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 		AccountID:    "acct_123",
 		ExpiresAt:    time.Unix(1_700_000_000, 0).UTC(),
 		APIKey:       "sk-test",
+		BaseURL:      "https://chatgpt.com/backend-api/codex",
+		Model:        "gpt-5-codex",
+		AuthMode:     "codex_oauth",
 	}
 
 	path, err := Save(want)
