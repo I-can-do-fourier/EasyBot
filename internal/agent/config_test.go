@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"easybot/internal/auth"
+	"github.com/I-can-do-fourier/EasyBot/internal/auth"
 )
 
 func TestLoadConfigFromEnvUsesSavedAPIKey(t *testing.T) {

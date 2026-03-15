@@ -13,8 +13,8 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"easybot/internal/llm"
-	"easybot/internal/security"
+	"github.com/I-can-do-fourier/EasyBot/internal/llm"
+	"github.com/I-can-do-fourier/EasyBot/internal/security"
 	pdfapi "github.com/pdfcpu/pdfcpu/pkg/api"
 	pdfcpu "github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdfmodel "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"

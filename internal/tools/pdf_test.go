@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"easybot/internal/security"
+	"github.com/I-can-do-fourier/EasyBot/internal/security"
 )
 
 func TestReadPdfToolExtractsPlainText(t *testing.T) {

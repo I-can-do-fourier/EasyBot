@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"easybot/internal/agent"
-	"easybot/internal/auth"
+	"github.com/I-can-do-fourier/EasyBot/internal/agent"
+	"github.com/I-can-do-fourier/EasyBot/internal/auth"
 )
 
 const (

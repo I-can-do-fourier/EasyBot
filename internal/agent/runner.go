@@ -10,9 +10,9 @@ import (
 	"log"
 	"strings"
 
-	"easybot/internal/llm"
-	"easybot/internal/security"
-	"easybot/internal/tools"
+	"github.com/I-can-do-fourier/EasyBot/internal/llm"
+	"github.com/I-can-do-fourier/EasyBot/internal/security"
+	"github.com/I-can-do-fourier/EasyBot/internal/tools"
 )
 
 const systemPrompt = `You are easyBot, a local computer agent focused on safe file management, file analysis, file discovery, and bounded local command execution.

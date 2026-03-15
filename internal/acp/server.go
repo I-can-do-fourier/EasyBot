@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"easybot/internal/agent"
-	"easybot/internal/llm"
-	"easybot/internal/tools"
+	"github.com/I-can-do-fourier/EasyBot/internal/agent"
+	"github.com/I-can-do-fourier/EasyBot/internal/llm"
+	"github.com/I-can-do-fourier/EasyBot/internal/tools"
 )
 
 type Server struct {

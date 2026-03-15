@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"easybot/internal/agent"
+	"github.com/I-can-do-fourier/EasyBot/internal/agent"
 )
 
 func Run(ctx context.Context, listen string, cfg agent.Config) error {

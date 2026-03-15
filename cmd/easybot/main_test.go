@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"easybot/internal/agent"
+	"github.com/I-can-do-fourier/EasyBot/internal/agent"
 )
 
 func TestParseArgsKeepsLoginSubcommand(t *testing.T) {

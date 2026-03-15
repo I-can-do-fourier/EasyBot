@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"easybot/internal/llm"
-	"easybot/internal/security"
+	"github.com/I-can-do-fourier/EasyBot/internal/llm"
+	"github.com/I-can-do-fourier/EasyBot/internal/security"
 )
 
 type Result struct {

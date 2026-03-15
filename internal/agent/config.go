@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"easybot/internal/auth"
+	"github.com/I-can-do-fourier/EasyBot/internal/auth"
 )
 
 type Mode string

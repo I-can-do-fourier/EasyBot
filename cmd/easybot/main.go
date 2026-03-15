@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"easybot/internal/acp"
-	"easybot/internal/agent"
-	"easybot/internal/server"
+	"github.com/I-can-do-fourier/EasyBot/internal/acp"
+	"github.com/I-can-do-fourier/EasyBot/internal/agent"
+	"github.com/I-can-do-fourier/EasyBot/internal/server"
 )
 
 func main() {

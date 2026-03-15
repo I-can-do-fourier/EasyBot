@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"easybot/internal/security"
+	"github.com/I-can-do-fourier/EasyBot/internal/security"
 )
 
 func TestWriteFileSafetySummaryExistingFileRequiresApproval(t *testing.T) {
