@@ -64,6 +64,7 @@ Optional:
 export EASYBOT_ALLOWED_ROOTS=/Users/you,/tmp
 export EASYBOT_MAX_STEPS=8
 export EASYBOT_LOG_LEVEL=debug
+export EASYBOT_APP_LOG=./easybot.log
 export EASYBOT_AUDIT_LOG=/tmp/easybot-audit.jsonl
 export EASYBOT_TOOL_OUTPUT_MAX_BYTES=65536
 export EASYBOT_ACCESS_TOKEN=oauth_access_token
@@ -177,6 +178,7 @@ What is intentionally deferred:
 - `go run ./cmd/easybot login` uses the current OpenAI Codex OAuth browser flow with PKCE, a localhost callback on port `1455`, and a manual paste fallback for headless or remote sessions.
 - `run.sh` no longer hardcodes provider credentials; saved config or env vars drive runtime auth.
 - The terminal frontend supports interactive approval prompts.
+- Application logs write to `easybot.log` by default instead of the active chat terminal. Set `EASYBOT_APP_LOG` or `--app-log` to move that file, or set `EASYBOT_LOG_LEVEL=off` to disable app logs entirely.
 - The HTTP frontend only auto-approves safe read-only operations; file/data changes are denied unless you add a separate approval roundtrip.
 - Built-in tools now include filename search and text-content search, so the agent can inspect files without falling back to shell as often.
 - ACP currently keeps sessions in memory and auto-approves only safe read-only operations; writes and other data changes are denied until ACP approval callbacks are added.

@@ -107,3 +107,19 @@ func TestLoadConfigFromEnvUsesSavedCodexOAuthSettings(t *testing.T) {
 		t.Fatalf("cfg.Model = %q, want %q", cfg.Model, "gpt-5-codex")
 	}
 }
+
+func TestLoadConfigFromEnvUsesAppLogOverride(t *testing.T) {
+	root := t.TempDir()
+	wantLogPath := filepath.Join(root, "logs", "easybot.log")
+
+	t.Setenv("EASYBOT_ALLOWED_ROOTS", root)
+	t.Setenv("EASYBOT_APP_LOG", wantLogPath)
+
+	cfg, err := LoadConfigFromEnv()
+	if err != nil {
+		t.Fatalf("LoadConfigFromEnv returned error: %v", err)
+	}
+	if cfg.AppLogPath != wantLogPath {
+		t.Fatalf("cfg.AppLogPath = %q, want %q", cfg.AppLogPath, wantLogPath)
+	}
+}

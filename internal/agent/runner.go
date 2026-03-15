@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strings"
 
 	"easybot/internal/llm"
@@ -74,7 +73,10 @@ type Runner struct {
 	registry *tools.Registry
 	approver Approver
 	audit    *security.AuditLog
-	closer   io.Closer
+	logger   *log.Logger
+
+	auditCloser io.Closer
+	logCloser   io.Closer
 }
 
 func NewRunner(cfg Config, approver Approver) (*Runner, error) {
@@ -84,26 +86,45 @@ func NewRunner(cfg Config, approver Approver) (*Runner, error) {
 	if err != nil {
 		return nil, err
 	}
+	logger, logCloser, err := newAppLogger(cfg)
+	if err != nil {
+		if closer != nil {
+			_ = closer.Close()
+		}
+		return nil, err
+	}
 	audit := security.NewAuditLog(auditWriter)
 	registry := tools.NewRegistry(pathPolicy, cmdPolicy, audit, cfg.ToolOutputMaxBytes)
 
 	client := llm.NewClient(cfg.BaseURL, cfg.APIKey, cfg.AccessToken, cfg.AccountID, cfg.Model, string(cfg.AuthMode))
-	log.Default().Printf("Initialized runner with config: %+v", cfg)
-	return &Runner{
+	runner := &Runner{
 		cfg:      cfg,
 		client:   client,
 		registry: registry,
 		approver: approver,
 		audit:    audit,
-		closer:   closer,
-	}, nil
+		logger:   logger,
+
+		auditCloser: closer,
+		logCloser:   logCloser,
+	}
+	runner.logger.Printf("runner initialized: %s", runnerLogSummary(cfg))
+	return runner, nil
 }
 
 func (r *Runner) Close() error {
-	if r.closer != nil {
-		return r.closer.Close()
+	var errs []error
+	if r.logCloser != nil {
+		if err := r.logCloser.Close(); err != nil {
+			errs = append(errs, err)
+		}
 	}
-	return nil
+	if r.auditCloser != nil {
+		if err := r.auditCloser.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (r *Runner) Run(ctx context.Context, req Request) (Response, error) {
@@ -196,7 +217,6 @@ func (r *Runner) run(ctx context.Context, req Request, hooks Hooks) (Response, e
 
 func RunTerminal(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 	runner, err := NewRunner(cfg, TerminalApprover{In: in, Out: out, AutoApproveSafe: true})
-	log.Default().Printf("Initialized terminal runner with config: %+v", runner.client)
 	if err != nil {
 		return err
 	}
@@ -234,12 +254,5 @@ func RunTerminal(ctx context.Context, cfg Config, in io.Reader, out io.Writer) e
 }
 
 func newAuditWriter(path string) (io.Writer, io.Closer, error) {
-	if strings.TrimSpace(path) == "" {
-		return io.Discard, nil, nil
-	}
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	if err != nil {
-		return nil, nil, err
-	}
-	return f, f, nil
+	return newFileWriter(path)
 }

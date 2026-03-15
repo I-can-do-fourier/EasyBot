@@ -112,6 +112,7 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 	cfg.AllowedRoots = splitAndTrim(*values.roots)
 	cfg.MaxSteps = *values.maxSteps
 	cfg.StepTimeout = time.Duration(*values.stepTimeoutSec) * time.Second
+	cfg.AppLogPath = strings.TrimSpace(*values.appLog)
 	cfg.AuditLogPath = strings.TrimSpace(*values.auditLog)
 	cfg.ToolOutputMaxBytes = *values.outputMaxBytes
 	if *values.acpMode {
@@ -174,6 +175,7 @@ type flagValues struct {
 	roots          *string
 	maxSteps       *int
 	stepTimeoutSec *int
+	appLog         *string
 	auditLog       *string
 	outputMaxBytes *int
 	acpMode        *bool
@@ -199,6 +201,7 @@ func newFlagSet(cfg agent.Config, runMode string, output io.Writer) (*flag.FlagS
 		roots:          fs.String("roots", strings.Join(cfg.AllowedRoots, ","), "comma-separated allowed roots"),
 		maxSteps:       fs.Int("max-steps", cfg.MaxSteps, "maximum agent loop steps"),
 		stepTimeoutSec: fs.Int("step-timeout-sec", int(cfg.StepTimeout/time.Second), "per-step timeout in seconds"),
+		appLog:         fs.String("app-log", cfg.AppLogPath, "application log path"),
 		auditLog:       fs.String("audit-log", cfg.AuditLogPath, "audit log path"),
 		outputMaxBytes: fs.Int("tool-output-max-bytes", cfg.ToolOutputMaxBytes, "max bytes captured from each tool output stream"),
 		acpMode:        fs.Bool("acp", cfg.Mode == agent.ModeACP, "run ACP stdio mode"),

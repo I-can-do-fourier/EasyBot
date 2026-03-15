@@ -218,7 +218,7 @@ func (c *Client) responsesChat(ctx context.Context, messages []Message, tools []
 		return Response{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/responses", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://chatgpt.com/backend-api/codex"+"/responses", bytes.NewReader(body))
 	if err != nil {
 		return Response{}, err
 	}

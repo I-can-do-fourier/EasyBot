@@ -34,6 +34,7 @@ type Config struct {
 	StepTimeout        time.Duration
 	Mode               Mode
 	LogLevel           string
+	AppLogPath         string
 	AuditLogPath       string
 	ToolOutputMaxBytes int
 }
@@ -76,6 +77,7 @@ func LoadConfigFromEnv() (Config, error) {
 		StepTimeout:        time.Duration(envInt("EASYBOT_STEP_TIMEOUT_SEC", 45)) * time.Second,
 		Mode:               Mode(envDefault("EASYBOT_MODE", string(ModeNonACP))),
 		LogLevel:           envDefault("EASYBOT_LOG_LEVEL", "info"),
+		AppLogPath:         envDefault("EASYBOT_APP_LOG", "easybot.log"),
 		AuditLogPath:       envDefault("EASYBOT_AUDIT_LOG", filepath.Join(os.TempDir(), "easybot-audit.jsonl")),
 		ToolOutputMaxBytes: envInt("EASYBOT_TOOL_OUTPUT_MAX_BYTES", 65536),
 	}
