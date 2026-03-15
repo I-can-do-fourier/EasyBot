@@ -88,6 +88,8 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 			runMode = "login"
 			args = args[1:]
 		default:
+			fs, _ := newFlagSet(cfg, runMode, os.Stdout)
+			fs.Usage()
 			return "", "", cfg, fmt.Errorf("unknown subcommand %q", args[0])
 		}
 	}
@@ -97,6 +99,7 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)
 		}
+		fs.Usage()
 		return "", "", cfg, err
 	}
 
