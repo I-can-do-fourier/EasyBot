@@ -18,6 +18,12 @@ import (
 	"github.com/I-can-do-fourier/EasyBot/internal/server"
 )
 
+var hiddenUsageFlags = map[string]struct{}{
+	"acp":    {},
+	"http":   {},
+	"listen": {},
+}
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -74,27 +80,27 @@ func main() {
 }
 
 func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, error) {
-	runMode := "terminal"
+	runMode := ""
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		switch args[0] {
 		case "terminal", "http", "acp":
 			runMode = args[0]
 			args = args[1:]
 		case "help", "--help", "-h":
-			fs, _ := newFlagSet(cfg, runMode, os.Stdout)
+			fs, _ := newFlagSet(runMode, os.Stdout)
 			fs.Usage()
 			os.Exit(0)
 		case "login", "--login":
 			runMode = "login"
 			args = args[1:]
 		default:
-			fs, _ := newFlagSet(cfg, runMode, os.Stdout)
+			fs, _ := newFlagSet(runMode, os.Stdout)
 			fs.Usage()
 			return "", "", cfg, fmt.Errorf("unknown subcommand %q", args[0])
 		}
 	}
 
-	fs, values := newFlagSet(cfg, runMode, os.Stderr)
+	fs, values := newFlagSet(runMode, os.Stderr)
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)
@@ -103,38 +109,75 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 		return "", "", cfg, err
 	}
 
-	cfg.BaseURL = strings.TrimSpace(*values.baseURL)
-	cfg.APIKey = strings.TrimSpace(*values.apiKey)
-	cfg.AccessToken = strings.TrimSpace(*values.accessToken)
-	cfg.AccountID = strings.TrimSpace(*values.accountID)
-	cfg.Model = strings.TrimSpace(*values.model)
-	cfg.AuthMode = agent.AuthMode(strings.TrimSpace(*values.authMode))
-	if cfg.AuthMode == "" {
-		cfg.AuthMode = agent.AuthModeAPIKey
+	setFlags := make(map[string]struct{})
+	fs.Visit(func(f *flag.Flag) {
+		setFlags[f.Name] = struct{}{}
+	})
+
+	if _, ok := setFlags["base-url"]; ok {
+		cfg.BaseURL = strings.TrimSpace(*values.baseURL)
 	}
-	cfg.AllowedRoots = splitAndTrim(*values.roots)
-	cfg.MaxSteps = *values.maxSteps
-	cfg.StepTimeout = time.Duration(*values.stepTimeoutSec) * time.Second
-	cfg.AppLogPath = strings.TrimSpace(*values.appLog)
-	cfg.AuditLogPath = strings.TrimSpace(*values.auditLog)
-	cfg.ToolOutputMaxBytes = *values.outputMaxBytes
-	if *values.acpMode {
-		runMode = "acp"
-		cfg.Mode = agent.ModeACP
-	} else {
-		cfg.Mode = agent.ModeNonACP
+	if _, ok := setFlags["api-key"]; ok {
+		cfg.APIKey = strings.TrimSpace(*values.apiKey)
+	}
+	if _, ok := setFlags["access-token"]; ok {
+		cfg.AccessToken = strings.TrimSpace(*values.accessToken)
+	}
+	if _, ok := setFlags["account-id"]; ok {
+		cfg.AccountID = strings.TrimSpace(*values.accountID)
+	}
+	if _, ok := setFlags["model"]; ok {
+		cfg.Model = strings.TrimSpace(*values.model)
+	}
+	if _, ok := setFlags["auth-mode"]; ok {
+		cfg.AuthMode = agent.AuthMode(strings.TrimSpace(*values.authMode))
+		if cfg.AuthMode == "" {
+			cfg.AuthMode = agent.AuthModeAPIKey
+		}
+	}
+	if _, ok := setFlags["roots"]; ok {
+		cfg.AllowedRoots = splitAndTrim(*values.roots)
+	}
+	if _, ok := setFlags["max-steps"]; ok {
+		cfg.MaxSteps = *values.maxSteps
+	}
+	if _, ok := setFlags["step-timeout-sec"]; ok {
+		cfg.StepTimeout = time.Duration(*values.stepTimeoutSec) * time.Second
+	}
+	if _, ok := setFlags["app-log"]; ok {
+		cfg.AppLogPath = strings.TrimSpace(*values.appLog)
+	}
+	if _, ok := setFlags["audit-log"]; ok {
+		cfg.AuditLogPath = strings.TrimSpace(*values.auditLog)
+	}
+	if _, ok := setFlags["tool-output-max-bytes"]; ok {
+		cfg.ToolOutputMaxBytes = *values.outputMaxBytes
 	}
 
-	if *values.httpMode {
+	if runMode == "" {
+		if cfg.Mode == agent.ModeACP {
+			runMode = "acp"
+		} else {
+			runMode = "terminal"
+		}
+	}
+
+	if _, ok := setFlags["acp"]; ok && *values.acpMode {
+		runMode = "acp"
+	}
+	if _, ok := setFlags["http"]; ok && *values.httpMode {
 		if runMode == "acp" {
 			return "", "", cfg, fmt.Errorf("--http and --acp cannot be used together")
 		}
 		runMode = "http"
-	} else if runMode != "http" && runMode != "acp" && runMode != "login" {
-		runMode = "terminal"
 	}
-	if *values.loginMode {
+	if _, ok := setFlags["login"]; ok && *values.loginMode {
 		runMode = "login"
+	}
+	if runMode == "acp" {
+		cfg.Mode = agent.ModeACP
+	} else if runMode != "login" {
+		cfg.Mode = agent.ModeNonACP
 	}
 	if len(cfg.AllowedRoots) == 0 {
 		return "", "", cfg, fmt.Errorf("at least one allowed root is required")
@@ -185,47 +228,72 @@ type flagValues struct {
 	loginMode      *bool
 }
 
-func newFlagSet(cfg agent.Config, runMode string, output io.Writer) (*flag.FlagSet, flagValues) {
+func newFlagSet(runMode string, output io.Writer) (*flag.FlagSet, flagValues) {
 	fs := flag.NewFlagSet("easybot", flag.ContinueOnError)
 	fs.SetOutput(output)
-	authMode := string(cfg.AuthMode)
-	if strings.TrimSpace(authMode) == "" {
-		authMode = string(agent.AuthModeAPIKey)
-	}
+	defaultCfg := agent.DefaultConfig()
 	values := flagValues{
 		httpMode:       fs.Bool("http", runMode == "http", "run HTTP server mode"),
 		listen:         fs.String("listen", ":8080", "HTTP listen address"),
-		baseURL:        fs.String("base-url", cfg.BaseURL, "LLM API base URL"),
-		apiKey:         fs.String("api-key", cfg.APIKey, "LLM API key"),
-		accessToken:    fs.String("access-token", cfg.AccessToken, "OAuth access token for Codex auth mode"),
-		accountID:      fs.String("account-id", cfg.AccountID, "ChatGPT/Codex account ID for Codex auth mode"),
-		model:          fs.String("model", cfg.Model, "LLM model name"),
-		authMode:       fs.String("auth-mode", authMode, "auth mode: api_key or codex_oauth"),
-		roots:          fs.String("roots", strings.Join(cfg.AllowedRoots, ","), "comma-separated allowed roots"),
-		maxSteps:       fs.Int("max-steps", cfg.MaxSteps, "maximum agent loop steps"),
-		stepTimeoutSec: fs.Int("step-timeout-sec", int(cfg.StepTimeout/time.Second), "per-step timeout in seconds"),
-		appLog:         fs.String("app-log", cfg.AppLogPath, "application log path"),
-		auditLog:       fs.String("audit-log", cfg.AuditLogPath, "audit log path"),
-		outputMaxBytes: fs.Int("tool-output-max-bytes", cfg.ToolOutputMaxBytes, "max bytes captured from each tool output stream"),
-		acpMode:        fs.Bool("acp", cfg.Mode == agent.ModeACP, "run ACP stdio mode"),
+		baseURL:        fs.String("base-url", defaultCfg.BaseURL, "LLM API base URL"),
+		apiKey:         fs.String("api-key", "", "LLM API key"),
+		accessToken:    fs.String("access-token", "", "OAuth access token for Codex auth mode"),
+		accountID:      fs.String("account-id", "", "ChatGPT/Codex account ID for Codex auth mode"),
+		model:          fs.String("model", defaultCfg.Model, "LLM model name"),
+		authMode:       fs.String("auth-mode", string(defaultCfg.AuthMode), "auth mode: api_key or codex_oauth"),
+		roots:          fs.String("roots", strings.Join(defaultCfg.AllowedRoots, ","), "comma-separated allowed roots"),
+		maxSteps:       fs.Int("max-steps", defaultCfg.MaxSteps, "maximum agent loop steps"),
+		stepTimeoutSec: fs.Int("step-timeout-sec", int(defaultCfg.StepTimeout/time.Second), "per-step timeout in seconds"),
+		appLog:         fs.String("app-log", defaultCfg.AppLogPath, "application log path"),
+		auditLog:       fs.String("audit-log", defaultCfg.AuditLogPath, "audit log path"),
+		outputMaxBytes: fs.Int("tool-output-max-bytes", defaultCfg.ToolOutputMaxBytes, "max bytes captured from each tool output stream"),
+		acpMode:        fs.Bool("acp", runMode == "acp", "run ACP stdio mode"),
 		loginMode:      fs.Bool("login", false, "run login mode to get oauth token interactively"),
 	}
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), `easyBot
 
-	Run directly in terminal mode:
+	Run in terminal mode:
   ./easybot
 
-	Run HTTP mode:
-  ./easybot --http --listen :8080
-
-Run ACP stdio mode:
-  ./easybot acp
-  ./easybot --acp
+	Run interactive login:
+  ./easybot login
 
 Flags:
 `)
-		fs.PrintDefaults()
+		printVisibleDefaults(fs)
 	}
 	return fs, values
+}
+
+func printVisibleDefaults(fs *flag.FlagSet) {
+	fs.VisitAll(func(f *flag.Flag) {
+		if _, hidden := hiddenUsageFlags[f.Name]; hidden {
+			return
+		}
+		name, usage := flag.UnquoteUsage(f)
+		if name != "" {
+			fmt.Fprintf(fs.Output(), "  -%s %s\n", f.Name, name)
+		} else {
+			fmt.Fprintf(fs.Output(), "  -%s\n", f.Name)
+		}
+		if defValue, ok := usageDefaultValue(f); ok {
+			fmt.Fprintf(fs.Output(), "    %s (default %q)\n", usage, defValue)
+			return
+		}
+		fmt.Fprintf(fs.Output(), "    %s\n", usage)
+	})
+}
+
+func usageDefaultValue(f *flag.Flag) (string, bool) {
+	if boolFlag, ok := f.Value.(interface{ IsBoolFlag() bool }); ok && boolFlag.IsBoolFlag() {
+		if f.DefValue == "false" {
+			return "", false
+		}
+		return f.DefValue, true
+	}
+	if f.DefValue == "" {
+		return "", false
+	}
+	return f.DefValue, true
 }

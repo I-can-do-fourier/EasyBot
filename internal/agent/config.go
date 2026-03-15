@@ -39,7 +39,26 @@ type Config struct {
 	ToolOutputMaxBytes int
 }
 
+func DefaultConfig() Config {
+	authMode := AuthModeAPIKey
+	return Config{
+		BaseURL:            defaultBaseURL(authMode),
+		Model:              "gpt-4.1-mini",
+		AuthMode:           authMode,
+		AllowedRoots:       splitCSV(defaultAllowedRoots()),
+		MaxSteps:           8,
+		StepTimeout:        45 * time.Second,
+		Mode:               ModeNonACP,
+		LogLevel:           "info",
+		AppLogPath:         "easybot.log",
+		AuditLogPath:       filepath.Join(os.TempDir(), "easybot-audit.jsonl"),
+		ToolOutputMaxBytes: 65536,
+	}
+}
+
 func LoadConfigFromEnv() (Config, error) {
+	defaultCfg := DefaultConfig()
+
 	savedAuth, err := auth.Load()
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return Config{}, err
@@ -48,9 +67,9 @@ func LoadConfigFromEnv() (Config, error) {
 		savedAuth = auth.File{}
 	}
 
-	authMode := AuthMode(envDefault("EASYBOT_AUTH_MODE", fallbackString(savedAuth.AuthMode, string(AuthModeAPIKey))))
+	authMode := AuthMode(envDefault("EASYBOT_AUTH_MODE", fallbackString(savedAuth.AuthMode, string(defaultCfg.AuthMode))))
 	baseURL := envDefault("EASYBOT_BASE_URL", fallbackString(savedAuth.BaseURL, defaultBaseURL(authMode)))
-	model := envDefault("EASYBOT_MODEL", fallbackString(savedAuth.Model, "gpt-4.1-mini"))
+	model := envDefault("EASYBOT_MODEL", fallbackString(savedAuth.Model, defaultCfg.Model))
 
 	apiKey := strings.TrimSpace(os.Getenv("EASYBOT_API_KEY"))
 	if apiKey == "" {
@@ -65,22 +84,21 @@ func LoadConfigFromEnv() (Config, error) {
 		accountID = strings.TrimSpace(savedAuth.AccountID)
 	}
 
-	cfg := Config{
-		BaseURL:            baseURL,
-		APIKey:             apiKey,
-		AccessToken:        accessToken,
-		AccountID:          accountID,
-		Model:              model,
-		AuthMode:           authMode,
-		AllowedRoots:       splitCSV(envDefault("EASYBOT_ALLOWED_ROOTS", defaultAllowedRoots())),
-		MaxSteps:           envInt("EASYBOT_MAX_STEPS", 8),
-		StepTimeout:        time.Duration(envInt("EASYBOT_STEP_TIMEOUT_SEC", 45)) * time.Second,
-		Mode:               Mode(envDefault("EASYBOT_MODE", string(ModeNonACP))),
-		LogLevel:           envDefault("EASYBOT_LOG_LEVEL", "info"),
-		AppLogPath:         envDefault("EASYBOT_APP_LOG", "easybot.log"),
-		AuditLogPath:       envDefault("EASYBOT_AUDIT_LOG", filepath.Join(os.TempDir(), "easybot-audit.jsonl")),
-		ToolOutputMaxBytes: envInt("EASYBOT_TOOL_OUTPUT_MAX_BYTES", 65536),
-	}
+	cfg := defaultCfg
+	cfg.BaseURL = baseURL
+	cfg.APIKey = apiKey
+	cfg.AccessToken = accessToken
+	cfg.AccountID = accountID
+	cfg.Model = model
+	cfg.AuthMode = authMode
+	cfg.AllowedRoots = splitCSV(envDefault("EASYBOT_ALLOWED_ROOTS", strings.Join(defaultCfg.AllowedRoots, ",")))
+	cfg.MaxSteps = envInt("EASYBOT_MAX_STEPS", defaultCfg.MaxSteps)
+	cfg.StepTimeout = time.Duration(envInt("EASYBOT_STEP_TIMEOUT_SEC", int(defaultCfg.StepTimeout/time.Second))) * time.Second
+	cfg.Mode = Mode(envDefault("EASYBOT_MODE", string(defaultCfg.Mode)))
+	cfg.LogLevel = envDefault("EASYBOT_LOG_LEVEL", defaultCfg.LogLevel)
+	cfg.AppLogPath = envDefault("EASYBOT_APP_LOG", defaultCfg.AppLogPath)
+	cfg.AuditLogPath = envDefault("EASYBOT_AUDIT_LOG", defaultCfg.AuditLogPath)
+	cfg.ToolOutputMaxBytes = envInt("EASYBOT_TOOL_OUTPUT_MAX_BYTES", defaultCfg.ToolOutputMaxBytes)
 
 	if cfg.MaxSteps <= 0 {
 		return Config{}, fmt.Errorf("EASYBOT_MAX_STEPS must be > 0")
