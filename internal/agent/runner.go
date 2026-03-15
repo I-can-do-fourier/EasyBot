@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -87,6 +88,7 @@ func NewRunner(cfg Config, approver Approver) (*Runner, error) {
 	registry := tools.NewRegistry(pathPolicy, cmdPolicy, audit, cfg.ToolOutputMaxBytes)
 
 	client := llm.NewClient(cfg.BaseURL, cfg.APIKey, cfg.AccessToken, cfg.AccountID, cfg.Model, string(cfg.AuthMode))
+	log.Default().Printf("Initialized runner with config: %+v", cfg)
 	return &Runner{
 		cfg:      cfg,
 		client:   client,
@@ -194,6 +196,7 @@ func (r *Runner) run(ctx context.Context, req Request, hooks Hooks) (Response, e
 
 func RunTerminal(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 	runner, err := NewRunner(cfg, TerminalApprover{In: in, Out: out, AutoApproveSafe: true})
+	log.Default().Printf("Initialized terminal runner with config: %+v", runner.client)
 	if err != nil {
 		return err
 	}
