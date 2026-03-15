@@ -39,7 +39,7 @@ const (
 	manualLoginPromptDelay       = 15 * time.Second
 	defaultOpenAIBaseURL         = "https://api.openai.com/v1"
 	defaultCodexBaseURL          = "https://chatgpt.com/backend-api/codex"
-	defaultOpenAIModel           = "gpt-4.1-mini"
+	defaultOpenAIModel           = "gpt-5.4"
 	loginUserAgent               = "easybot/0.1"
 )
 

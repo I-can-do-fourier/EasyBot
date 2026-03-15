@@ -63,6 +63,7 @@ Use the Codex OAuth login flow and saved credentials:
 
 ```bash
 export EASYBOT_AUTH_MODE=codex_oauth
+export EASYBOT_MODEL=gpt-5.4
 ```
 
 Then sign in interactively:
@@ -72,8 +73,6 @@ go run ./cmd/easybot login
 ```
 
 The login flow stores credentials and runtime defaults in `~/.easybot/auth.json`. When related environment variables are unset, `easyBot` reuses the saved `auth_mode`, `base_url`, `model`, `access_token`, and `account_id`.
-
-If you want to override the saved model later, set `EASYBOT_MODEL` before launching `easyBot`.
 
 ## Common configuration
 
