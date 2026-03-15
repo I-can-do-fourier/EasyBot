@@ -1,4 +1,4 @@
-module easybot
+module github.com/I-can-do-fourier/EasyBot
 
 go 1.24.0
 
