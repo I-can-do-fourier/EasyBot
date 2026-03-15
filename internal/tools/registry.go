@@ -40,6 +40,7 @@ func NewRegistry(pathPolicy security.PathPolicy, cmdPolicy security.CommandPolic
 	for _, tool := range []Tool{
 		NewListDirTool(pathPolicy, audit),
 		NewReadFileTool(pathPolicy, audit),
+		NewReadPdfTool(pathPolicy, audit),
 		NewFindFilesTool(pathPolicy, audit),
 		NewSearchFileContentTool(pathPolicy, audit),
 		NewStatFileTool(pathPolicy, audit),
