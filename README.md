@@ -11,16 +11,6 @@
 - Runs guarded local commands without shell injection risk
 - Keeps room for future ACP and non-ACP modes
 
-## Why the first HTTP server uses the Go standard library
-
-I chose `net/http` for the initial implementation:
-
-- smallest dependency surface
-- easier to audit
-- enough for a JSON API right now
-- simple to replace with `chi` or `gin` later if you want richer middleware
-
-If you want, I can switch the HTTP layer to `chi` next.
 
 ## Security model
 
@@ -38,19 +28,25 @@ If you want, I can switch the HTTP layer to `chi` next.
 
 Set these before running:
 
+### api_key mode
+api_key mode uses the OpenAI-compatible API path and an API key for auth. Set these env vars:
+
 ```bash
+export EASYBOT_AUTH_MODE=api_key
 export EASYBOT_MODEL=gpt-4.1-mini
 export EASYBOT_BASE_URL=https://api.openai.com/v1
-export EASYBOT_AUTH_MODE=api_key
-```
-
-If you are using API-key mode:
-
-```bash
 export EASYBOT_API_KEY=your_api_key
 ```
 
-Or sign in with Codex/ChatGPT OAuth interactively:
+### codex_oauth mode
+codex_oauth mode uses the Codex OAuth flow for auth and the Codex API path over HTTP/SSE. Set these env vars to use saved OAuth credentials from a previous login:
+
+```bash
+export EASYBOT_AUTH_MODE=codex_oauth
+export EASYBOT_MODEL=gpt-5.4
+```
+
+sign in with Codex/ChatGPT OAuth interactively:
 
 ```bash
 go run ./cmd/easybot login
