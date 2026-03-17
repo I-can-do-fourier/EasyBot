@@ -1,6 +1,6 @@
 # EasyBot
 
-`easyBot` is a light-weight local AI assistant for the terminal. It can chat, read and edit files inside approved directories, work across codebases and local projects, search project content, and run guarded local commands without going through a shell.
+`EasyBot` is a light-weight local AI assistant for the terminal. It can chat, read and edit files inside approved directories, work across codebases and local projects, search project content, and run guarded local commands without going through a shell.
 
 The current user-facing workflow is terminal-first and supports two authentication modes: `api_key` and `codex_oauth`.
 
