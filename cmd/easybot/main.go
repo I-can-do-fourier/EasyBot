@@ -105,7 +105,6 @@ func parseArgs(cfg agent.Config, args []string) (string, string, agent.Config, e
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)
 		}
-		fs.Usage()
 		return "", "", cfg, err
 	}
 
